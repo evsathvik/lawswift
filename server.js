@@ -3,7 +3,7 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 require('dotenv').config();
 
-const db = require('./db');
+const getPool = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -34,7 +34,10 @@ app.post('/waitlist', async (req, res) => {
             });
         }
 
-        const [existingUsers] = await db.query(
+        const pool = await getPool();
+
+        // Check if email already exists
+        const [existingUsers] = await pool.query(
             "SELECT id FROM waitlist WHERE email = ?",
             [email]
         );
@@ -46,8 +49,9 @@ app.post('/waitlist', async (req, res) => {
             });
         }
 
-        const [result] = await db.query(
-            "INSERT INTO waitlist (name, email) VALUES (?, ?)",
+        // Insert new entry
+        const [result] = await pool.query(
+            "INSERT INTO waitlist (name, email, created_at) VALUES (?, ?, CURRENT_TIMESTAMP)",
             [name, email]
         );
 
@@ -58,8 +62,9 @@ app.post('/waitlist', async (req, res) => {
                 id: result.insertId
             }
         });
+
     } catch (error) {
-        console.error(error);
+        console.error("🔥 Server error:", error);
         res.status(500).json({
             success: false,
             message: "Server error"
@@ -77,5 +82,5 @@ app.use((req, res) => {
 
 // Start server
 app.listen(PORT, () => {
-    console.log(`🚀 Server running on http://localhost:${PORT}`);
+    console.log(`🚀 Server running on port ${PORT}`);
 });
